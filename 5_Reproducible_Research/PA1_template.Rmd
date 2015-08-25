@@ -1,0 +1,142 @@
+Reproducible Research: Peer Assessment 1
+================
+Prepared by Ryan Kuhn  
+
+
+This document was prepared for the Reproducible Research 
+course offered by John Hopkins University on the Coursera 
+platform.  The course can be accessed at 
+https://class.coursera.org/repdata-008. The purpose of this 
+project was to get familiar with using the markdown language 
+and knitr packages in RStudio. The project has a defined rubric 
+which was designed by the course instructors and will be graded 
+by peers within the course. The data set was obtained from the 
+instructor provided link and accordingly, I take no responsibility 
+for the validity of the data used to perform this analysis.
+
+##Lets Begin!
+
+
+####Step 1: Load the data
+The first step is to load the data. The data was dowloaded in
+as a zip file so must be unzipped before being read in.  Note
+that the working directory for knitr is different that that used
+by R console.
+```{r}
+setInternet2(use=TRUE)
+myURL<- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(myURL,destfile="Data.zip",mode="wb")
+unzip("Data.zip")
+Raw.Data<-read.csv("activity.csv")
+```
+
+####Step 2: Exploratory Analysis
+Now that the data has been loaded into R, we can perform the
+basic analysis to understand what the data looks like.  My preference
+is to use the str() command.  Based on the output we can see that there 
+are 17,568 rows of data and 3 variables. The date variable has 61 levels 
+indicating we have data from 61 different dates.  The interval variable 
+is the time of day the measurement was taken.
+
+```{r}
+str(Raw.Data)
+max(Raw.Data$interval)
+```
+
+Let's create a histogram of the number of steps by date.
+
+```{r}
+TTL.by.Day<-aggregate(steps~date,data=Raw.Data,FUN=sum)
+hist(TTL.by.Day$steps,
+     main="Histogram of Total Steps per Day",
+     xlab="Total Steps",
+     ylab="Frequency",
+     col="red")
+```
+
+This shows a clear peak at the 10,000 step bin.  The data looks normally 
+distributed but we'll calculate the mean and median steps per day to verify- 
+and they're pretty close.
+```{r}
+mean(TTL.by.Day$steps); median(TTL.by.Day$steps)
+```
+
+
+####Step 3: Time Series Analysis
+Lets create a time series analysis to understand the activity by time of day.
+We'll calculate the averate number of steps of at each five minute interval 
+and chart that average.  
+```{r}
+Avg.Series<- aggregate(steps~interval, data=Raw.Data, FUN=mean)
+plot(Avg.Series,type="l",axes=F,
+     main="Average Steps by Time of Day")
+axis(side=1, at=seq(0,2400,by=100))
+axis(side=2, at=seq(0,225,by=25))
+```  
+
+There is a clear spike at around 8am but which interval
+is the actual maximum?  The which.max() function can be used in the row index to
+return the interval to answer that question: 8:35am.
+```{r}
+Avg.Series[which.max(Avg.Series$steps),1]
+```
+####Step 4: Handling missing values
+There are several missing values in the dataset. To calculate how many, we
+can use the complete.cases() function.  It returns a logical value- true for 
+complete cases and false for incomplete cases.  The logical values can be 
+counted by the sum function.
+
+```{r}
+sum(!complete.cases(Raw.Data$steps))
+```
+Since the dataset has missing values, we'll impute them using the average
+values by interval calculated in the Step 3 above.
+
+```{r}
+library(plyr)
+New.Data<-join(Raw.Data,Avg.Series,by="interval")
+New.Data[,1]<-ifelse(is.na(New.Data[,1]),New.Data[,4],New.Data[,1])
+New.Data<-New.Data[,-4]
+```    
+
+As a check to make sure the data hasn't been distoroted, we'll regenerate the 
+timeseries analysis and put it next to the original created in Step 3 above.  
+I've used the lattice package to draw the charts and they look identical.
+
+```{r}
+New.Avg<-aggregate(steps~interval,data=New.Data,FUN=mean)
+library(lattice)
+xyplot(steps~interval|which,
+       make.groups(Avg.Series=Avg.Series,New.Avg=New.Avg),
+       groups=which,auto.key=T,type="l",ylab="Steps",col=c("red","blue"),
+       main=list(label="Comparison of Activty levels",cex=1.25),
+       strip=strip.custom(factor.levels=c("NAs Omitted","NAs Imputed")),
+       layout=c(1,2),scales=list(x=list(limits=c(0,2400),tick.number=10)))
+```
+
+####Step 5: Comparing Weekday and Weekend Activity
+The last step of this analysis is to determine if there is a difference between 
+the activity levels on the weekend.  First, we'll use create a factor to indicate
+the day as weekday or weekend.  The $wday name of POSIXlt is zero indexed so it 
+returns a value 0-6 with Sunday as 0 and Saturday as 6. We'll use the aggregate 
+function again to calculate the means and then we'll draw the plots.
+
+```{r}
+New.Data$Weekday<-strptime(New.Data$date,format="%F")$wday
+New.Data$Weekday<-as.factor(ifelse(New.Data$Weekday<6 & New.Data$Weekday>0,"Weekday","Weekend"))
+Split.Avg<-aggregate(steps~Weekday+interval,data=New.Data,mean)
+
+xyplot(steps~interval|factor(Weekday),data=Split.Avg,type="l",
+       main=list(label="Comparison of Average Activity by Weekend and Weekdays",cex=1.25),
+       ylab="Steps",xlab="Time of Day", layout=c(1,2),col="black",
+       scales=list(x=list(limits=c(0,2400),tick.number=10)))
+
+```
+
+In comparing the plots, we can see that the general activity patterns fairly different.
+The weekend activity levels are much higher throughout the day whereas the weekday activity
+level has a dramatic spike between 8 and 9am.  In both charts there is nearly no activity
+until 5am.  These patterns seem reasonable because people are generally sleeping so not 
+moving in the morning and on weekdays may go to the gym in the morning before sitting at
+their desk for the rest of the day.  On weekends, people are off of work so are free to move 
+about all day.

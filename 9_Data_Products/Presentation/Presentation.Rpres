@@ -1,0 +1,116 @@
+New Jersey Employee Salary Comparison
+========================================================  
+  
+  
+<small>
+Ryan Kuhn, CPA  
+Data Science Specialization  
+John Hopkins University  
+</small>
+
+Objective
+========================================================
+The purpose of this presentation is to explain why the NJ Employees 
+Salary application is relevant.
+
+
+Application Overview
+========================================================
+- Downloads a sampe of data from the NJ Open Data website using the SODA API
+- Create a theoretical distribution with the same characteristics of the sample data
+- Collect an input from the user and estimate the percentile this input would fall in the salary distribution
+
+
+Example Inputs
+====
+Here is an example of the output using these two inputs:  
+Salary: $100,000   
+Year : 2014
+
+The app will show a chart with the distribution of the salaries 
+and comment with comparison of the salary input to the mean of the distribution. 
+
+Chart Output
+====
+```{r environment, echo=FALSE, results='hide', warnings= FALSE, messages=FALSE, fig.width=8, fig.height=4.5, out.width="1920px"}
+require(RJSONIO)
+require(ggplot2)
+require(scales)
+library(knitr)
+# knitr::opts_chunk(echo=FALSE)
+```
+
+```{r Function, echo=FALSE}
+  # This function is used to access the SODA API and download the data from the NJ Open
+  # Data website.  The funtion takes the year as an input and downloads the first 1000
+  # entries.
+  GetData<- function(n){
+    # Returns the dataframe from the download.  The dataframe is 1000 rows by 1 column.
+    # The filters are applied by the string after the '?'.  The 'master' record type 
+    # was used because it had the YTD earnings.  The alternative was to use the 
+    # 'detail' record type which had current period payroll entries. 
+    URL<-paste("http://data.nj.gov/resource/iqwc-r2w7.json?record_type=master&calendar_year=",n,sep="")
+    RawData<-fromJSON(URL)
+    
+    Temp<- data.frame(salary= as.numeric(sapply(RawData,"[[","master_ytd_earnings")),
+                      stringsAsFactors = F)
+    L<-list(mu=mean(Temp$salary),
+         SD=sd(Temp$salary),
+         values=Temp$salary)
+    L
+  }
+```
+
+```{r inputs, echo=FALSE}
+iSalary<- 100000
+iYear  <- "2014"
+```
+
+```{r data prep, echo=FALSE}
+# Call the funtion and get the sample data
+Data<- GetData(iYear)
+
+# Create a dataframe with the points to make a normal distribution with 
+# the same mean and standare deviation as the sample data 
+xval<- seq(0,150000,length=10000)
+Norm<- data.frame(x=xval,
+                  y=dnorm(xval,mean=Data[[1]], sd=Data[[2]]))
+
+Percentile<- pnorm(iSalary,
+                   mean=Data[[1]],
+                   sd=Data[[2]])
+
+```
+
+```{r plot, echo=FALSE}
+ggplot(Norm) + 
+  aes(x=x,y=y) +
+  geom_line(size=1.5) +
+  labs(title="Distribution of Salaries \n for New Jersey State Employees",
+       y= element_blank())  +
+  scale_x_continuous(labels=comma, limits=c(0,150000)) +
+  # Add vertical line for the user's salary
+  geom_vline(xintercept=iSalary, colour="blue", size=2)  +
+  theme(plot.title=element_text(size=rel(2)),
+        axis.text.y=element_blank(),
+        panel.background=element_rect(fill="white",colour="black"),
+        panel.grid.major=element_blank(),
+        panel.grid.minor= element_blank())
+
+```
+
+
+Benefits
+====
+- Allows user the ability to quickly compare their salary to the NJ state employee's
+- Plot is easy to understand at a glance.  No need for lengthy explanation.    
+- Minimal inputs (2) which should reduce confusion    
+
+
+
+Questions?
+========================================================
+
+For any questions, please contact me at kuhnrl30@gmail.com.
+
+Thanks for viewing!

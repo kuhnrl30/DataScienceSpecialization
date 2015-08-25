@@ -1,0 +1,98 @@
+---
+title: "Statistical Inference Project- Part 1"
+author: "Ryan Kuhn"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+  word_document: default
+---
+
+### Overview
+```{r environment, echo=FALSE, warning=FALSE, message=FALSE}
+setwd("C:/users/ryan/dropbox/coursera/6_statistical_inference")
+library(ggplot2)
+library(knitr)
+library(gridExtra)
+```
+ 
+This report is part of the Statistical Inference course which is part of the Data Science Specialization by John Hopkins University. There are two parts to this report. 
+The first part explores an exponential distribution and the Cental Limit Theorum. 
+The second part is a practical application on a toy dataset.  Part 2 is in a second file and can be found [here](www.rpubs.com/kuhnrl30/StatisticalInference2)
+
+### Simulations
+This analysis explores an exponential distribution.  From [Wikipedia](https://en.wikipedia.org/?title=Exponential_distribution): 
+In probability theory and statistics, the exponential distribution (a.k.a. negative exponential distribution) is the probability distribution that describes the time between events in a Poisson process, i.e. a process in which events occur continuously and independently at a constant average rate.
+
+We will uses several simulations to understand the Central Limit Theorum and compare it to the theoretical values. 
+We'll start by generating our data using the rexp() function in R.
+We'll take 1,000 samples from the exponential distribution with each sample having 40 elements.
+In all, we will have 40,000 elements drawn from the population. 
+You'll see in Figure 1 below that the majority of elements are low value and decrease in frequency as the values increase. 
+
+### Simulation vs Theoretical Values
+
+We can calculate some summary statistics from the simulated data and compare it to the theoretical values.  The table below shows the mean, variance, and standard deviation of the samples as compared to the theoretical values. 
+To calculate the simulation values, we first take the mean value for each of the 1,000 samples. 
+Since the initial elements were randomly drawn from the exponential distribution, then the mean of each 40 element sample is also a random number.
+This is an important fact to note because it allows us to perform the next following calculations.  
+
+We start by calculating the mean value of this set of sample means for a sort of mean of means. The 'mean of means' value should be randomly distributed around the mean of the exponential distribution.  Figure 2 below shows the distribution of the sample means and how it is normally distributed. Obviously, the distribution is not perfectly gaussian but it would become more so if more than 1,000 samples were drawn. Note the red line is the 'mean of the means. and has a value of 4.996.
+
+Next, we calculate the standard deviation and variance of the sample means.  This standard deviation value should be randomly distributed around the mean of the exponential distribution. 
+The table below shows the simulated values for the mean, variance, and standard deviation to the theoretical values.  Its clear from the table that the difference between the simulation and theory are very small and would further converge on theory as the number of simulations goes to infinity.
+
+Statistic | Simulation Values | Theoretical Values
+---- | ---- | -----
+Mean |  4.996 | 0.500
+Standard Deviation | 0.801  | 0.791
+Variance | 0.651 | 0.625
+
+
+### R Code
+```{r, message=FALSE, warning=FALSE}
+# Set parameters
+lambda      <- 0.2   
+samplesize  <- 40   # Number of items drawn from each 
+sims        <- 1000 # Number of simulations
+
+# Generate the random data
+#   The code below generates a dataframe with 1000 columns each with
+#   40 rows.  Each column is a sample from the exponential distribution.
+#   The colMeans function takes the mean of each sample transposes it 
+#   into a dataframe with a single column and 1000 rows.
+set.seed(2345)
+Data  <- data.frame(replicate(n = sims, expr = rexp(n = samplesize, lambda)))
+sMeans<- data.frame(Means=colMeans(Data))
+
+# Summary statistics
+#   Calculate the mean, standard deviation, and variance for the simulation
+#   and the theoretical values.
+MeanOfMeans <- mean(sMeans$Means)
+SDofMeans   <- sd(sMeans$Means)
+VarOfMeans  <- SDofMeans^2
+ThryMean    <- 1/lambda *(1/sqrt(samplesize))
+ThryVar     <- ThryMean^2
+
+# Plots
+Plot1Hist<-data.frame(V1=unlist(Data))
+Plot1<-ggplot(Plot1Hist) + 
+  aes(x=V1) +
+  geom_histogram(binwidth=.2, fill="green",colour="black") +
+  labs(title="Fig 1: Distribution of Individual Elements", 
+       x="Elements drawn from the Exponential Distribution")
+
+Plot2<- ggplot(sMeans) +
+  aes(x=Means) +
+  geom_histogram(aes(y=..density..),binwidth=.2, fill="blue", colour="black") +
+  scale_x_continuous(breaks=1:10) +
+  labs(title="Fig 2: Distribution of Sample Means",
+       x= "Samle Means") +
+  geom_vline(aes(xintercept= mean(Means)),size= 2, colour="red" ) +
+  geom_density(aes(Means), size=1.5)
+```
+
+```{r, warning=FALSE, echo=FALSE}
+grid.arrange(Plot1,Plot2,nrow=1)
+```

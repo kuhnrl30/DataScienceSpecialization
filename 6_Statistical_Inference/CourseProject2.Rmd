@@ -1,0 +1,89 @@
+---
+title: "Statistical Inference Project- Part 2"
+author: "Ryan Kuhn"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+# Objective
+The purpose of this paper is to perform a simple interential analysis of the tooth growth data set that comes with the base R installation. 
+The dataset measures the impact of Vitamin C on tooth growth in guinea pigs.
+includes observations for different combinations of 2 supplements and 3 dosages. 
+There are 10 observations for each combination of dosage and supplement for a total of 60 observations. 
+The supplments are orange juice (OJ) or ascorbic acid (VC).
+
+
+# Inferential Data Analysis
+Figure 1 below shows the range of tooth length for each combination of supplements and dosages. Each box includes a horizontal range indicated the mean value for the values. 
+At first visual inspection, we note that there is an increasing trend in tooth length as the supplement dosage increases. 
+We can also see that the mean value for 'VC' supplment is less than 'OJ' for smaller doses but the difference seems to diminish as the dose size increases. 
+This is confirmed by the values in Table 1 below. 
+
+We can perform simple T-test to determine in tooth growth length is statistically different between the two supplments for each dosage level
+We'll do seperate test for each of dosage level: 0.5 mL, 1 mL, and 2 mL.
+Our test will be to accept or reject the hypothesis that supplment does have an impact on the tooth growth. 
+After another look at Figure 1, it looks like there is difference in the two supplements at the 0.5 mL and 1 mL level but there may not be a difference at 2 mL. 
+If the resulting p-valuefrom these tests are less than 0.05, then we can state our conclusions with 95% confidence. 
+Before continuing, we have to note one primary assumption is this test. 
+That is that the data is paired.
+This is appears to be a safe assumption because for each combination, there are exacly 10 observations, but none the less, it is an assumption
+
+The p-values for both tests were very small as expected. 
+I say the test values are as expected because we can see clearly from figure 1 that the mean tooth length between orange juice and ascorbic acid are not the same for the 0.5 mL and 1 mL dose. 
+On the other hand, this is not true for the 2 mL dosage since the mean values are close together. 
+Overall, we can conclude from these tests that teeth grow longer with orange juice over ascorbic acid when the dose is 1 mL or less. 
+Greater than 1 mL, there does not appear to be a difference in tooth growth.
+
+Dosage | T Test p-value | Decision
+---- | --- | ----
+0.5 mL | 0.006359 | Do not reject
+1 mL| 0.001038 | Do not reject
+2 mL | 0.9639 | Reject
+
+# R Code
+```{r loadData}
+Data<-ToothGrowth
+Data$dose<- factor(Data$dose)
+```
+
+```{r}
+ggplot(Data) + 
+  aes(x=dose,y=len, fill= supp) +
+  geom_boxplot() +
+  labs(title= "Fig 1: Tooth growth by Supplement and Dose size")
+```
+
+```{r}
+#   The output shows the summary statistics for each of the variables. It
+#   does not provide information about the combination of values. Most
+#   importantly, it shows the quartile distribution of the 'len' or lenght
+#   variable.
+summary(Data)
+```
+
+**Tbl 1: Mean Tooth length by combination**
+```{r}
+# Summary of means
+#   The table shows the mean tooth length for each combination of 
+#   suppment and dose size.
+Data %>%
+  group_by(supp,dose) %>%
+  summarise(Mean= mean(len)) %>%
+  spread(dose,Mean)
+```
+
+**T- Test for significance of impact of supplment**
+```{r, results='hold'}
+t.test(len~supp,Data[Data$dose=="0.5",])
+t.test(len~supp,Data[Data$dose=="1",])
+t.test(len~supp,Data[Data$dose=="2",])
+
+```
