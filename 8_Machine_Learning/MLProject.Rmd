@@ -1,0 +1,79 @@
+---
+title: "Machine Learning Project"
+output: html_document
+data: 2016-01-30
+layout: post
+comments: true
+---
+
+### Background  
+
+The objective of this analysis is the use accelerameter data to predict (classify) the manner in which a participant was performing an exercise.  There are 5 different classes to predict lettered A through E wit a being the only correct method. The data was collected from the person's belt, forearm, arm or dumbell. Data such as this is collected from poular devices such as Jawbone or FitBit.  The data was generously provided by Groupware@LES. You can read more about the project [here](http://groupware.les.inf.puc-rio.br/har). 
+
+### Download the Data  
+```{r}
+# trainURL<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+#testURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+# 
+# download.file(trainURL, "train.csv", mode="w")
+#download.file(testURL, "test.csv", mode="w")
+
+train    <- read.csv("train.csv", header = T, stringsAsFactors = F, na.strings = c("","NA"))
+test    <- read.csv("test.csv", header = T, stringsAsFactors = F, na.strings = "NA")
+train$classe<- factor(train$classe)
+```
+
+### Split out the validation set  
+There are `r nrow(train)` observations in the training set and `r nrow(test)` observations in the test set. Since there are so many observations in the training set, I should be able to use a small percentage as a hold-out, or validation set, and still have a enough items to adequately do the validation.  I'll use a 90/10 split. 
+
+```{r, message=FALSE, warning=FALSE, results='hold'}
+library(caret)
+split<- createDataPartition(train$classe, p=0.9, list=FALSE)
+validation<- train[-split,]
+train<- train[split,]
+```
+
+### Brief Exploratory Analysis  
+There are 5 classes of outcomes: A through E. The outcomes are not evenly distributed and there are more A's than the other classes. 'A' is the class for a correctly performed exercise. 
+
+```{r, results='hold'}
+table(train$classe)
+```
+
+```{r}
+train<- train[,-c(1:7)]
+validation<-validation[,-c(1:7)]
+```
+After running the summary of the training set, it was easy to see there were many variables with NA values. In fact, if the variable had any NA values, then the variablw was almost entirely NA.  Because of this, it is safe to remove those variables since they will not add value to the majority of observations. 
+
+```{r}
+index<- which(colSums(is.na(train))>0)
+train<- train[,-index]
+validation<- validation[,-index]
+```
+
+### Fit a Random Forest model
+I setup the model to use 5-fold crossvalidation to reduce the computing time.  As it stands, training the model takes several minutes for my 
+```{r}
+fit<- train(classe~., 
+            data = train, 
+            method = "rf", 
+            trControl= trainControl(method = "cv", 
+                                    number = 5,
+                                    allowParallel = T))
+```
+### Predict on Validation Set
+```{r}
+pred<- predict(fit, newdata=validation)
+
+confusionMatrix(validation$classe, pred)
+```
+Not bad, our prediction only misclassified 1 observation. The accuracy of this model is 99.95% which is incredible. I'll run the prediction against the test set and get the results for the quiz.  
+
+```{r}
+test<- test[,-c(1:7)]
+test<- test[,-index]
+final_pred<- predict(fit, newdata=test)
+```
+
+

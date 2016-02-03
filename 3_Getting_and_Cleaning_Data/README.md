@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 Data_Science_Course
 ===================
 The purpose of this README is to explain the files within the repo and scope of the project.  The project was undertaken as an assignement to the Getting and Cleaning Data course run by Jeff Leek at John Hopkins Unversity and hosted by Coursera.  The course can be found [here] (https://class.coursera.org/getdata-005).  
@@ -18,6 +17,4 @@ After transformation, the X_train.matrix and X_test.matrix files are combined in
    
 The final step in the analysis was to use the aggregate function to calculated the mean value for each measure by the subject and activity IDs.  This created a dataset called final.dataset that was 180 rows by 68 columns wide.  
 
-=======
-# 3_Get_and_Clean_Data
->>>>>>> 934b83cbf8465f58dd58e65711f17153291319c4
+
